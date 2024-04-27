@@ -310,8 +310,9 @@ This section contains code for the main function- you should write some code for
 '''
 
 def main():
-	#You should write some code for handling flags here
-	 global testt
+    #You should write some code for handling flags here
+    global testt
+	
     #task 1:
     H = 0.0
     alpha = 1.0
@@ -348,6 +349,7 @@ def main():
         testing = 1
     if testing ==True or testt ==True:
         run_defuant(beta=beta, threshold=threshold, population_size=100, iterations=10000, testing=testing)
+	    
 
 if __name__=="__main__":
 	main()
