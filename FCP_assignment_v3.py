@@ -21,12 +21,64 @@ class Network:
 
 	def get_mean_degree(self):
 		#Your code  for task 3 goes here
+		if not self.nodes:
+			return 0
+			  
+		degrees = [sum(1 for conn in node.connections if conn == 1) for node in self.nodes]
+		mean_degree = np.mean(degrees)
+		return mean_degree
 
 	def get_mean_clustering(self):
 		#Your code for task 3 goes here
+		num_nodes = len(self.nodes)
+		path_lengths = []
+    
+		for start in range(num_nodes):
+			visited = [False] * num_nodes
+			distances = [0] * num_nodes
+			queue = [start]
+        
+			visited[start] = True
+        
+			while queue:
+				current = queue.pop(0)
+				for neighbour_index, connected in enumerate(self.nodes[current].connections):
+					if connected and not visited[neighbour_index]:
+						visited[neighbour_index] = True
+						distances[neighbour_index] = distances[current] + 1
+						queue.append(neighbour_index)
+			path_lengths.extend([dist for dist in distances if dist > 0])
+		if not path_lengths:
+			return float('inf')
+		mean_path_length = sum(path_lengths) / (num_nodes * (num_nodes - 1))
+		return mean_path_length
 
 	def get_mean_path_length(self):
 		#Your code for task 3 goes here
+		# 遍历每个节点计算其聚类系数
+		clustering_coeffs = []
+		for node in self.nodes:
+			neighbors = [i for i, connected in enumerate(node.connections) if connected]
+			if len(neighbors) < 2:
+				# 少于两个邻居，无法形成三角形
+				clustering_coeffs.append(0)
+				continue
+
+			# 计算邻居之间可能的连接数（即可以形成的三角形数量）
+			possible_triangles = len(neighbors) * (len(neighbors) - 1) / 2
+			actual_triangles = 0
+			# 遍历邻居之间的连接
+			for i in range(len(neighbors)):
+				for j in range(i + 1, len(neighbors)):
+					if self.nodes[neighbors[i]].connections[neighbors[j]]:
+						actual_triangles += 1
+
+			# 计算并保存节点的聚类系数
+			clustering_coeffs.append(actual_triangles / possible_triangles)
+
+		# 计算所有节点聚类系数的平均值
+		mean_clustering_coefficient = np.mean(clustering_coeffs)
+		return mean_clustering_coefficient
 
 	def make_random_network(self, N, connection_probability=0.5):
 		'''
