@@ -1,6 +1,9 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import sys
+matplotlib.use('TkAgg')
 
 class Node:
 
@@ -21,64 +24,12 @@ class Network:
 
 	def get_mean_degree(self):
 		#Your code  for task 3 goes here
-		if not self.nodes:
-			return 0
-			  
-		degrees = [sum(1 for conn in node.connections if conn == 1) for node in self.nodes]
-		mean_degree = np.mean(degrees)
-		return mean_degree
 
 	def get_mean_clustering(self):
 		#Your code for task 3 goes here
-		num_nodes = len(self.nodes)
-		path_lengths = []
-    
-		for start in range(num_nodes):
-			visited = [False] * num_nodes
-			distances = [0] * num_nodes
-			queue = [start]
-        
-			visited[start] = True
-        
-			while queue:
-				current = queue.pop(0)
-				for neighbour_index, connected in enumerate(self.nodes[current].connections):
-					if connected and not visited[neighbour_index]:
-						visited[neighbour_index] = True
-						distances[neighbour_index] = distances[current] + 1
-						queue.append(neighbour_index)
-			path_lengths.extend([dist for dist in distances if dist > 0])
-		if not path_lengths:
-			return float('inf')
-		mean_path_length = sum(path_lengths) / (num_nodes * (num_nodes - 1))
-		return mean_path_length
 
 	def get_mean_path_length(self):
 		#Your code for task 3 goes here
-		# 遍历每个节点计算其聚类系数
-		clustering_coeffs = []
-		for node in self.nodes:
-			neighbors = [i for i, connected in enumerate(node.connections) if connected]
-			if len(neighbors) < 2:
-				# 少于两个邻居，无法形成三角形
-				clustering_coeffs.append(0)
-				continue
-
-			# 计算邻居之间可能的连接数（即可以形成的三角形数量）
-			possible_triangles = len(neighbors) * (len(neighbors) - 1) / 2
-			actual_triangles = 0
-			# 遍历邻居之间的连接
-			for i in range(len(neighbors)):
-				for j in range(i + 1, len(neighbors)):
-					if self.nodes[neighbors[i]].connections[neighbors[j]]:
-						actual_triangles += 1
-
-			# 计算并保存节点的聚类系数
-			clustering_coeffs.append(actual_triangles / possible_triangles)
-
-		# 计算所有节点聚类系数的平均值
-		mean_clustering_coefficient = np.mean(clustering_coeffs)
-		return mean_clustering_coefficient
 
 	def make_random_network(self, N, connection_probability=0.5):
 		'''
@@ -184,53 +135,68 @@ def test_networks():
 This section contains code for the Ising Model - task 1 in the assignment
 ==============================================================================================================
 '''
+def calculate_agreement(population, row, col, external=0.0, alpha=1.0):
+    #  Calculate the agreement at a given position.
+    """
+    population: the current state of the Ising model.
+    row: the row index of the position.
+    col: the column index of the position.
+    external: the magnitude of any external "pull" on opinion.
+    alpha: system's tolerance for disagreement.
+    """
 
-def calculate_agreement(population, row, col, external=0.0):
-	'''
-	This function should return the extent to which a cell agrees with its neighbours.
-	Inputs: population (numpy array)
-			row (int)
-			col (int)
-			external (float)
-	Returns:
-			change_in_agreement (float)
-	'''
+    n_rows, n_cols = population.shape
+    sum_neighbors = 0
 
-	#Your code for task 1 goes here
+    # Neighbors' coordinates (Up, Right, Down, Left)
+    neighbors = [(row - 1, col), (row, col + 1), (row + 1, col), (row, col - 1)]
+    for x, y in neighbors:
+        if 0 <= x < n_rows and 0 <= y < n_cols:
+            sum_neighbors += population[x, y]
+    # Agreement considers the external influence
+    agreement = sum_neighbors * population[row, col] + external * population[row, col]
 
-	return np.random.random() * population
+    return agreement
+    # The agreement value at the given position
 
-def ising_step(population, external=0.0):
-	'''
-	This function will perform a single update of the Ising model
-	Inputs: population (numpy array)
-			external (float) - optional - the magnitude of any external "pull" on opinion
-	'''
-	
-	n_rows, n_cols = population.shape
-	row = np.random.randint(0, n_rows)
-	col  = np.random.randint(0, n_cols)
 
-	agreement = calculate_agreement(population, row, col, external=0.0)
+def ising_step(population, alpha=1.0, external=0.0):
+    #  Single update of the Ising model.
 
-	if agreement < 0:
-		population[row, col] *= -1
+    """
+    This function will perform a single update of the Ising model.
+    Inputs: population (numpy array)
+            alpha (float) - system's tolerance for disagreement
+            external (float) - the magnitude of any external "pull" on opinion
+    """
+    n_rows, n_cols = population.shape
+    row = np.random.randint(0, n_rows)
+    col = np.random.randint(0, n_cols)
 
-	#Your code for task 1 goes here
+    agreement = calculate_agreement(population, row, col, alpha, external)
+
+    prob_flip = np.exp(-agreement) / alpha if agreement > 0 else 1
+
+    if np.random.random() < prob_flip or agreement < 0:
+        population[row, col] *= -1
+
+    return population
+
 
 def plot_ising(im, population):
-	'''
-	This function will display a plot of the Ising model
-	'''
+    # Plot the Ising model.
 
+    """
+    im: matplotlib image object.
+    population: the current state of the Ising model.
+    """
     new_im = np.array([[255 if val == -1 else 1 for val in rows] for rows in population], dtype=np.int8)
     im.set_data(new_im)
     plt.pause(0.1)
 
+
 def test_ising():
-	'''
-	This function will test the calculate_agreement function in the Ising model
-	'''
+    # Test calculations.
 
     print("Testing ising model calculations")
     population = -np.ones((3, 3))
@@ -262,7 +228,8 @@ def test_ising():
 
 
 def ising_main(population, alpha=None, external=0.0):
-    
+    # Main function for the Ising model.
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.set_axis_off()
@@ -277,17 +244,63 @@ def ising_main(population, alpha=None, external=0.0):
         plot_ising(im, population)
 
 
+
 '''
 ==============================================================================================================
 This section contains code for the Defuant Model - task 2 in the assignment
 ==============================================================================================================
 '''
+def defuant_model(opinions, threshold, beta,iterations):
+    # Implementation of the Defuant model.
+    """
+    opinions: initial opinions.
+    threshold: threshold for interaction.
+    beta: updating rate.
+    iterations: number of iterations.
+    """
+    opinions_over_time = [[] for i in range(len(opinions))]
+    for t in range(iterations):
+        i = np.random.randint(len(opinions))
+        j = (i + 1) % len(opinions) if np.random.rand() > 0.5 else (i - 1) % len(opinions)
 
-def defuant_main():
-	#Your code for task 2 goes here
+        if abs(opinions[i] - opinions[j]) < threshold:
+            opinions[i] += beta * (opinions[j] - opinions[i])
+            opinions[j] += beta * (opinions[i] - opinions[j])
+        for i in range(len(opinions)):
+            opinions_over_time[i].append(opinions[i])
+    return opinions_over_time
+    # list of lists, opinions over time
 
-def test_defuant():
-	#Your code for task 2 goes here
+def run_defuant(beta, threshold, population_size, iterations, testing=False):
+    """
+    beta: updating rate.
+    threshold: threshold for interaction.
+    population_size: number of agents.
+    iterations: number of iterations.
+    testing: flag to plot opinions over time if True.
+    """
+    initial_population = np.random.rand(population_size)
+    opinions_over_time = defuant_model(initial_population, threshold, beta,iterations)
+    # Plot the final population distribution
+    plt.figure(figsize=(14, 7))
+    plt.subplot(1, 2, 1)
+    opinions_transposed = list(zip(*opinions_over_time))
+    plt.hist(opinions_transposed[-1], bins=np.linspace(0, 1, 20), color='blue', edgecolor='black')
+    plt.title('Final Population Distribution')
+    plt.xlabel('Opinion')
+    plt.ylabel('Frequency')
+
+    # If testing flag is set, plot the opinions over time
+    # if testing:
+    plt.subplot(1, 2, 2)
+    plt.title('Opinions Over Time')
+    plt.xlabel('Timestep')
+    plt.ylabel('Opinion')
+    for opinions in opinions_over_time:
+        plt.plot(opinions, 'o', markersize=3, label=f'Person {opinions}')
+    plt.tight_layout()
+    plt.show()
+
 
 
 '''
@@ -298,6 +311,43 @@ This section contains code for the main function- you should write some code for
 
 def main():
 	#You should write some code for handling flags here
+	 global testt
+    #task 1:
+    H = 0.0
+    alpha = 1.0
+    grid_size = 10
+    if "-ising_model" in sys.argv:
+        if "-external" in sys.argv:
+            external_index = sys.argv.index("-external") + 1
+            H = float(sys.argv[external_index])
+
+
+
+        if "-alpha" in sys.argv:
+            alpha_index = sys.argv.index("-alpha") + 1
+            alpha = float(sys.argv[alpha_index])
+        population = np.random.choice([-1, 1], size=(grid_size, grid_size))
+        ising_main(population, alpha, H)
+    elif "-test_ising" in sys.argv:
+        test_ising()
+    #task 2
+    beta = 0.2
+    threshold = 0.2
+    testing = False
+    testt=0
+    if "-defuant" in sys.argv:
+        testt = 1
+        if "-beta" in sys.argv:
+            beta_index = sys.argv.index("-beta") + 1
+            beta = float(sys.argv[beta_index])
+        if "-threshold" in sys.argv:
+            threshold_index = sys.argv.index("-threshold") + 1
+            threshold = float(sys.argv[threshold_index])
+
+    elif "-test_defuant" in sys.argv:
+        testing = 1
+    if testing ==True or testt ==True:
+        run_defuant(beta=beta, threshold=threshold, population_size=100, iterations=10000, testing=testing)
 
 if __name__=="__main__":
 	main()
